@@ -1,5 +1,7 @@
-package com.dagnis.restcountries;
+package com.dagnis.restcountries.controller;
 
+import com.dagnis.restcountries.model.Country;
+import com.dagnis.restcountries.service.CountriesService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 

@@ -1,5 +1,6 @@
-package com.dagnis.restcountries;
+package com.dagnis.restcountries.service;
 
+import com.dagnis.restcountries.model.Country;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
