@@ -32,7 +32,9 @@ public class WildCardService {
         var transformedWildcard = wildcardTransformerService.transform(wildcard);
         var euAllCountriesFromApi = getEuAllCountriesFromApi();
         return euAllCountriesFromApi.stream()
-                .filter(country -> country.getName().matches(transformedWildcard))
+                .filter(country -> country.getName()
+                        .toLowerCase()
+                        .matches(transformedWildcard))
                 .toList();
     }
 
