@@ -7,6 +7,7 @@ import com.dagnis.restcountries.model.CurrencyEntity;
 import com.dagnis.restcountries.repository.CountryRepository;
 import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -17,11 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -106,17 +103,20 @@ public class CountriesService {
                     .stream()
                     .map(entity -> modelMapper.map(entity, Country.class))
                     .collect(Collectors.toList());
+        } else {
+            countryRepository.deleteAll();
+            currencyRepository.deleteAll();
+
+            ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
+            Country[] countries = response.getBody();
+            log.info("Getting countries from API");
+
+            var countriesList = List.of(Objects.requireNonNull(countries));
+            insertCountriesIntoDatabase(countriesList);
+            return countriesList;
         }
-
-        ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
-        Country[] countries = response.getBody();
-        log.info("Getting countries from API");
-        var countriesList = List.of(Objects.requireNonNull(countries));
-        insertCountriesIntoDatabase(countriesList);
-
-        return countriesList;
     }
-
+    
     private List<Country> getCountriesFromFile() throws IOException {
         log.info("Getting countries from FILE");
         ObjectMapper objectMapper = new ObjectMapper();
@@ -124,7 +124,8 @@ public class CountriesService {
         return Arrays.asList(objectMapper.readValue(filePath.toFile(), Country[].class));
     }
 
-    private void insertCountriesIntoDatabase(List<Country> countries) {
+    @VisibleForTesting
+    void insertCountriesIntoDatabase(List<Country> countries) {
         for (Country country : countries) {
             var countryEntity = modelMapper.map(country, CountryEntity.class);
 
@@ -146,7 +147,8 @@ public class CountriesService {
         }
     }
 
-    private boolean checkIfDataNotStale() {
+    @VisibleForTesting
+    boolean checkIfDataNotStale() {
         long DAY = 24 * 60 * 60 * 1000;
         Optional<CountryEntity> country = countryRepository.findFirstByOrderByCreatedAsc();
         return country.filter(value -> value.getCreated().getTime() > System.currentTimeMillis() - DAY).isPresent();

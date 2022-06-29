@@ -7,7 +7,6 @@
         </encoder>
     </appender>
     <appender name="SAVE-TO-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>./src/main/resources/log/rest-countries.log</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
@@ -20,7 +19,7 @@
             </Pattern>
         </encoder>
     </appender>
-    <logger name="com.dagnis.restcountries.service.WildCardService" level="debug">
+    <logger name="com.dagnis.restcountries.service.CountriesService" level="debug">
         <appender-ref ref="SAVE-TO-FILE"/>
     </logger>
     <root level="info">
