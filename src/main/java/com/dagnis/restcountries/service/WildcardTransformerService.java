@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 public class WildcardTransformerService {
 
     public String transform(String wildcard) {
-        // todo implement
         StringBuilder transformedWildcard = new StringBuilder();
         char[] wildcardChars = wildcard.toCharArray();
         for (char i : wildcardChars) {
