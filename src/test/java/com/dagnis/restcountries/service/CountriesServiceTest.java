@@ -100,4 +100,19 @@ class CountriesServiceTest {
         Assertions.assertTrue(countriesService.checkIfDataNotStale());
     }
 
+    @Test
+    void shouldNotThrowOnDeletingFromDatabase() {
+        Currency currency = new Currency("EUR", "Euro", "E");
+        List<Currency> currencies = new ArrayList<>();
+        currencies.add(currency);
+        Country country = new Country("Austria", "Vienna", currencies, 900000, 1234);
+
+        List<Country> countries = new ArrayList<>();
+        countries.add(country);
+        countriesService.insertCountriesIntoDatabase(countries);
+
+        countryRepository.deleteAll();
+        currencyRepository.deleteAll();
+    }
+
 }
