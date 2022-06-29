@@ -15,7 +15,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @SpringBootTest
 class CountriesServiceTest {
@@ -36,33 +35,40 @@ class CountriesServiceTest {
     }
 
     @Test
-    void shouldAddCountryToDb() {
-        Currency currency = new Currency("EUR", "Euro", "E");
+    void shouldAddCountryAndCurrencyToDb() {
+        String code = "EUR";
+        String currencyName = "Euro";
+        String symbol = "E";
+        Currency currency = new Currency(code, currencyName, symbol);
         List<Currency> currencies = new ArrayList<>();
         currencies.add(currency);
-        Country country = new Country("Austria", "Vienna", currencies, 900000, 1234);
 
+        String countryName = "Austria";
+        String capital = "Vienna";
+        Integer population = 900000;
+        Integer area = 1234;
+
+        Country country = new Country(countryName, capital, currencies, population, area);
         List<Country> countries = new ArrayList<>();
         countries.add(country);
         countriesService.insertCountriesIntoDatabase(countries);
 
-        List<CountryEntity> countriesFound = countryRepository.findAll();
-        Assertions.assertEquals(countriesFound.size(), 1);
-    }
-
-    @Test
-    void shouldAddCurrencyToDb() {
-        Currency currency = new Currency("GBP", "Pound", "G");
-        List<Currency> currencies = new ArrayList<>();
-        currencies.add(currency);
-        Country country = new Country("UK", "London", currencies, 900000, 1234);
-
-        List<Country> countries = new ArrayList<>();
-        countries.add(country);
-        countriesService.insertCountriesIntoDatabase(countries);
 
         List<CurrencyEntity> currenciesFound = currencyRepository.findAll();
         Assertions.assertEquals(currenciesFound.size(), 1);
+        CurrencyEntity currencyFound = currenciesFound.get(0);
+        Assertions.assertEquals(code, currencyFound.getCode());
+        Assertions.assertEquals(currencyName, currencyFound.getName());
+        Assertions.assertEquals(symbol, currencyFound.getSymbol());
+
+        List<CountryEntity> countriesFound = countryRepository.findAll();
+        CountryEntity countryFound = countriesFound.get(0);
+        Assertions.assertEquals(countryName, countryFound.getName());
+        Assertions.assertEquals(capital, countryFound.getCapital());
+        Assertions.assertEquals(population, countryFound.getPopulation());
+        Assertions.assertEquals(area, countryFound.getArea());
+        Assertions.assertNotNull(countryFound.getId());
+        Assertions.assertNotNull(countryFound.getCreated());
     }
 
     @Test
@@ -127,8 +133,10 @@ class CountriesServiceTest {
         countries.add(country);
         countriesService.insertCountriesIntoDatabase(countries);
 
-        Optional<CountryEntity> countryEntity = Optional.ofNullable(countryRepository.findAll().get(0));
-        Assertions.assertNotNull(countryEntity.get().getCurrencies());
+        List<CountryEntity> countryEntities = countryRepository.findAll();
+        CountryEntity countryEntity = countryEntities.get(0);
+        Assertions.assertEquals(countryEntity.getCurrencies().size(), 1);
+
     }
 
 }
