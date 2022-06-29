@@ -1,6 +1,8 @@
 package com.dagnis.restcountries.service;
 
 import com.dagnis.restcountries.model.Country;
+import com.dagnis.restcountries.model.CountryEntity;
+import com.dagnis.restcountries.model.CountryMapper;
 import com.dagnis.restcountries.repository.CountryRepository;
 import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,12 +16,14 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class CountriesService {
 
+    private final CountryMapper countryMapper;
     private final CountryRepository countryRepository;
     private final CurrencyRepository currencyRepository;
 
@@ -92,7 +96,10 @@ public class CountriesService {
 
         if (checkIfDataNotStale()) {
             log.info("Getting countries from DB");
-            return countryRepository.findAll();
+            return countryRepository.findAll()
+                    .stream()
+                    .map(countryMapper::map)
+                    .collect(Collectors.toList());
         }
 
         ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
@@ -109,13 +116,12 @@ public class CountriesService {
     }
 
     private List<Country> insertCountriesIntoDatabase(List<Country> countries) {
-
         return countryRepository.saveAll(countries);
     }
 
     private boolean checkIfDataNotStale() {
         long DAY = 24 * 60 * 60 * 1000;
-        Optional<Country> country = countryRepository.findFirstByOrderByCreatedAsc();
+        Optional<CountryEntity> country = countryRepository.findFirstByOrderByCreatedAsc();
         return country.filter(value -> value.getCreated().getTime() > System.currentTimeMillis() - DAY).isPresent();
     }
 

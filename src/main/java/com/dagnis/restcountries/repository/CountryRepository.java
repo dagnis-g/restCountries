@@ -10,5 +10,5 @@ import java.util.Optional;
 @Repository
 public interface CountryRepository extends JpaRepository<CountryEntity, Integer> {
 
-    Optional<Country> findFirstByOrderByCreatedAsc();
+    Optional<CountryEntity> findFirstByOrderByCreatedAsc();
 }
