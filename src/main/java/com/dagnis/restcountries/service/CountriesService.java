@@ -2,15 +2,14 @@ package com.dagnis.restcountries.service;
 
 import com.dagnis.restcountries.model.Country;
 import com.dagnis.restcountries.model.CountryEntity;
-import com.dagnis.restcountries.model.CountryMapper;
 import com.dagnis.restcountries.model.Currency;
 import com.dagnis.restcountries.model.CurrencyEntity;
-import com.dagnis.restcountries.model.CurrencyMapper;
 import com.dagnis.restcountries.repository.CountryRepository;
 import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -30,8 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CountriesService {
 
-    private final CountryMapper countryMapper;
-    private final CurrencyMapper currencyMapper;
+    private final ModelMapper modelMapper;
     private final CountryRepository countryRepository;
     private final CurrencyRepository currencyRepository;
 
@@ -106,7 +104,7 @@ public class CountriesService {
             log.info("Getting countries from DB");
             return countryRepository.findAll()
                     .stream()
-                    .map(countryMapper::map)
+                    .map(entity -> modelMapper.map(entity, Country.class))
                     .collect(Collectors.toList());
         }
 
@@ -128,14 +126,14 @@ public class CountriesService {
 
     private void insertCountriesIntoDatabase(List<Country> countries) {
         for (Country country : countries) {
-            var countryEntity = countryMapper.map(country);
+            var countryEntity = modelMapper.map(country, CountryEntity.class);
 
             for (Currency currency : country.getCurrencies()) {
                 Optional<CurrencyEntity> optionalCurrencyEntity = currencyRepository.findById(currency.getCode());
 
                 CurrencyEntity currencyEntity;
                 if (optionalCurrencyEntity.isEmpty()) {
-                    currencyEntity = currencyMapper.map(currency);
+                    currencyEntity = modelMapper.map(currency, CurrencyEntity.class);
                     currencyEntity = currencyRepository.save(currencyEntity);
                 } else {
                     currencyEntity = optionalCurrencyEntity.get();
