@@ -3,6 +3,9 @@ package com.dagnis.restcountries.service;
 import com.dagnis.restcountries.model.Country;
 import com.dagnis.restcountries.model.CountryEntity;
 import com.dagnis.restcountries.model.CountryMapper;
+import com.dagnis.restcountries.model.Currency;
+import com.dagnis.restcountries.model.CurrencyEntity;
+import com.dagnis.restcountries.model.CurrencyMapper;
 import com.dagnis.restcountries.repository.CountryRepository;
 import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +18,11 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +31,7 @@ import java.util.stream.Collectors;
 public class CountriesService {
 
     private final CountryMapper countryMapper;
+    private final CurrencyMapper currencyMapper;
     private final CountryRepository countryRepository;
     private final CurrencyRepository currencyRepository;
 
@@ -105,7 +113,10 @@ public class CountriesService {
         ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
         Country[] countries = response.getBody();
         log.info("Getting countries from API");
-        return insertCountriesIntoDatabase(List.of(Objects.requireNonNull(countries)));
+        var countriesList = List.of(Objects.requireNonNull(countries));
+        insertCountriesIntoDatabase(countriesList);
+
+        return countriesList;
     }
 
     private List<Country> getCountriesFromFile() throws IOException {
@@ -115,8 +126,26 @@ public class CountriesService {
         return Arrays.asList(objectMapper.readValue(filePath.toFile(), Country[].class));
     }
 
-    private List<Country> insertCountriesIntoDatabase(List<Country> countries) {
-        return countryRepository.saveAll(countries);
+    private void insertCountriesIntoDatabase(List<Country> countries) {
+        for (Country country : countries) {
+            var countryEntity = countryMapper.map(country);
+
+            for (Currency currency : country.getCurrencies()) {
+                Optional<CurrencyEntity> optionalCurrencyEntity = currencyRepository.findById(currency.getCode());
+
+                CurrencyEntity currencyEntity;
+                if (optionalCurrencyEntity.isEmpty()) {
+                    currencyEntity = currencyMapper.map(currency);
+                    currencyEntity = currencyRepository.save(currencyEntity);
+                } else {
+                    currencyEntity = optionalCurrencyEntity.get();
+                }
+
+                countryEntity.addCurrency(currencyEntity);
+            }
+
+            countryRepository.save(countryEntity);
+        }
     }
 
     private boolean checkIfDataNotStale() {

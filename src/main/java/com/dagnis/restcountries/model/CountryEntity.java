@@ -15,7 +15,8 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -35,7 +36,7 @@ public class CountryEntity {
             joinColumns = @JoinColumn(name = "id"),
             inverseJoinColumns = @JoinColumn(name = "code")
     )
-    private List<Currency> currencies;
+    private Set<CurrencyEntity> currencies = new HashSet<>();
 
     private Integer population;
     private Integer area;
@@ -47,5 +48,9 @@ public class CountryEntity {
     @PrePersist
     private void onCreate() {
         created = new Date();
+    }
+
+    public void addCurrency(CurrencyEntity currencyEntity) {
+        this.currencies.add(currencyEntity);
     }
 }
