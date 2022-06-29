@@ -19,7 +19,7 @@ public class CountryEntity {
     private String name;
     private String capital;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany
     @JoinTable(
             name = "country_currency",
             joinColumns = @JoinColumn(name = "id"),
