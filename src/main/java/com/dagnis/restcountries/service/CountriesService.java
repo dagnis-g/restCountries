@@ -1,8 +1,15 @@
 package com.dagnis.restcountries.service;
 
 import com.dagnis.restcountries.model.Country;
+import com.dagnis.restcountries.model.CountryEntity;
+import com.dagnis.restcountries.model.Currency;
+import com.dagnis.restcountries.model.CurrencyEntity;
+import com.dagnis.restcountries.repository.CountryRepository;
+import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -14,10 +21,17 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CountriesService {
+
+    private final ModelMapper modelMapper;
+    private final CountryRepository countryRepository;
+    private final CurrencyRepository currencyRepository;
 
     @Value("${spring.sample.path-property}")
     String PATH_TO_SAVE_FILE;
@@ -83,13 +97,24 @@ public class CountriesService {
     }
 
     private List<Country> getAllEuCountriesFromApi() {
-        log.info("Getting countries from API");
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://restcountries.com/v2/regionalbloc/eu";
 
+        if (checkIfDataNotStale()) {
+            log.info("Getting countries from DB");
+            return countryRepository.findAll()
+                    .stream()
+                    .map(entity -> modelMapper.map(entity, Country.class))
+                    .collect(Collectors.toList());
+        }
+
         ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
         Country[] countries = response.getBody();
-        return Arrays.asList(Objects.requireNonNull(countries));
+        log.info("Getting countries from API");
+        var countriesList = List.of(Objects.requireNonNull(countries));
+        insertCountriesIntoDatabase(countriesList);
+
+        return countriesList;
     }
 
     private List<Country> getCountriesFromFile() throws IOException {
@@ -98,4 +123,33 @@ public class CountriesService {
         Path filePath = Path.of(PATH_TO_SAVE_FILE);
         return Arrays.asList(objectMapper.readValue(filePath.toFile(), Country[].class));
     }
+
+    private void insertCountriesIntoDatabase(List<Country> countries) {
+        for (Country country : countries) {
+            var countryEntity = modelMapper.map(country, CountryEntity.class);
+
+            for (Currency currency : country.getCurrencies()) {
+                Optional<CurrencyEntity> optionalCurrencyEntity = currencyRepository.findById(currency.getCode());
+
+                CurrencyEntity currencyEntity;
+                if (optionalCurrencyEntity.isEmpty()) {
+                    currencyEntity = modelMapper.map(currency, CurrencyEntity.class);
+                    currencyEntity = currencyRepository.save(currencyEntity);
+                } else {
+                    currencyEntity = optionalCurrencyEntity.get();
+                }
+
+                countryEntity.addCurrency(currencyEntity);
+            }
+
+            countryRepository.save(countryEntity);
+        }
+    }
+
+    private boolean checkIfDataNotStale() {
+        long DAY = 24 * 60 * 60 * 1000;
+        Optional<CountryEntity> country = countryRepository.findFirstByOrderByCreatedAsc();
+        return country.filter(value -> value.getCreated().getTime() > System.currentTimeMillis() - DAY).isPresent();
+    }
+
 }
