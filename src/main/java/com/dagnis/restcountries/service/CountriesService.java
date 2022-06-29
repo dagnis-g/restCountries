@@ -1,7 +1,10 @@
 package com.dagnis.restcountries.service;
 
 import com.dagnis.restcountries.model.Country;
+import com.dagnis.restcountries.repository.CountryRepository;
+import com.dagnis.restcountries.repository.CurrencyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -10,14 +13,15 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CountriesService {
+
+    private final CountryRepository countryRepository;
+    private final CurrencyRepository currencyRepository;
 
     @Value("${spring.sample.path-property}")
     String PATH_TO_SAVE_FILE;
@@ -83,13 +87,18 @@ public class CountriesService {
     }
 
     private List<Country> getAllEuCountriesFromApi() {
-        log.info("Getting countries from API");
         RestTemplate restTemplate = new RestTemplate();
         String uri = "https://restcountries.com/v2/regionalbloc/eu";
 
+        if (checkIfDataNotStale()) {
+            log.info("Getting countries from DB");
+            return countryRepository.findAll();
+        }
+
         ResponseEntity<Country[]> response = restTemplate.getForEntity(uri, Country[].class);
         Country[] countries = response.getBody();
-        return Arrays.asList(Objects.requireNonNull(countries));
+        log.info("Getting countries from API");
+        return insertCountriesIntoDatabase(List.of(Objects.requireNonNull(countries)));
     }
 
     private List<Country> getCountriesFromFile() throws IOException {
@@ -98,4 +107,16 @@ public class CountriesService {
         Path filePath = Path.of(PATH_TO_SAVE_FILE);
         return Arrays.asList(objectMapper.readValue(filePath.toFile(), Country[].class));
     }
+
+    private List<Country> insertCountriesIntoDatabase(List<Country> countries) {
+
+        return countryRepository.saveAll(countries);
+    }
+
+    private boolean checkIfDataNotStale() {
+        long DAY = 24 * 60 * 60 * 1000;
+        Optional<Country> country = countryRepository.findFirstByOrderByCreatedAsc();
+        return country.filter(value -> value.getCreated().getTime() > System.currentTimeMillis() - DAY).isPresent();
+    }
+
 }

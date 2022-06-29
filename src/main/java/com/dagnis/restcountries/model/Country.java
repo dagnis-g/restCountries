@@ -5,9 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -15,19 +14,35 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Table(name = "country")
 public class Country {
 
     @Id
-    @Column(name = "country_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
-
     private String name;
-
     private String capital;
-    
+    //    @OneToMany(mappedBy = "country")
+    //    private List<Currency> currencies;
+
+    @ManyToMany
+    @JoinTable(
+            name = "country_currency",
+            joinColumns = @JoinColumn(name = "id"),
+            inverseJoinColumns = @JoinColumn(name = "code")
+    )
     private List<Currency> currencies;
+
     private Integer population;
     private Integer area;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
+    private Date created;
+
+    @PrePersist
+    private void onCreate() {
+        created = new Date();
+    }
 
     public Integer getPopulationDensity() {
         if (population != null && area != null) {
